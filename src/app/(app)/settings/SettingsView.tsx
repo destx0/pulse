@@ -1,4 +1,4 @@
-import { Check, ChevronDown, CircleAlert, Minus, TriangleAlert } from "lucide-react"
+import { Check, ChevronDown, CircleAlert, Code2, Minus, TriangleAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ago, DAY, formatDay } from "@/lib/format"
 import { HEALTH_SIGNUP_URL } from "@/lib/google"
@@ -11,6 +11,9 @@ import { Progress } from "@/components/ui/progress"
 import { GoogleFit } from "@/components/brand/GoogleFit"
 import { Mark } from "@/components/brand/Mark"
 import { AppSettings, SignOutForm } from "./AppSettings"
+import { ConnectLeetcode } from "../leetcode/ConnectLeetcode"
+import { DisconnectLeetcodeButton } from "../leetcode/DisconnectLeetcodeButton"
+import { SyncLeetcodeButton } from "../leetcode/SyncLeetcodeButton"
 import { AvatarButtons, ChangePasswordButton, DeleteAccountButton, DisconnectButton, EditProfileButton, SwitchGoogleButton, ThemePicker } from "./SettingsClient"
 import { SettingsLayout, type SettingsSection } from "./SettingsLayout"
 import { CAPTION } from "@/components/metrics/primitives"
@@ -35,6 +38,9 @@ export type SettingsAccount = {
   /** An admin of this server: the account card links to the admin panel. */
   admin?: boolean
 }
+
+/** The LeetCode source's settings row: public profile, no OAuth grant. */
+export type LeetcodeSettings = { connected: boolean; username: string | null; syncedAt: number | null; error: string | null }
 
 /**
  * Who is signed in (name, @username, email) and what they can do about it: photo, password, sign out, delete the
@@ -230,6 +236,44 @@ export function DataSource({ vm, now, googleEmail = null }: { vm: Pick<SettingsV
   )
 }
 
+/**
+ * LeetCode (spec §7.14): a second, independent source. Public profile only, so connecting is a username, not a grant,
+ * and its data never feeds a health score.
+ */
+export function LeetcodeSource({ lc, now }: { lc: LeetcodeSettings; now: number }) {
+  return (
+    <SectionShell variant="card" level={2} id="leetcode" title="LeetCode">
+      {lc.connected ? (
+        <>
+          <div className="flex min-h-11 items-center gap-3">
+            <span aria-hidden className={TILE}>
+              <Code2 className="size-6 text-foreground-secondary" strokeWidth={1.5} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[15px] leading-[22px] font-semibold">{lc.username}</p>
+              <p className={cn("truncate text-[13px] leading-[18px] tabular-nums", lc.error ? "text-warning-text" : "text-muted-foreground")}>
+                {lc.error ? `Couldn’t refresh (${lc.error})` : lc.syncedAt ? `Synced ${ago(lc.syncedAt, now)}` : "Not synced yet"}
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <SyncLeetcodeButton className="[&_button]:w-full" />
+            <DisconnectLeetcodeButton className="w-full" />
+          </div>
+          <details className="mt-3">
+            <summary className="cursor-pointer text-[13px] leading-[18px] text-muted-foreground">Change username</summary>
+            <div className="mt-3">
+              <ConnectLeetcode defaultValue={lc.username ?? ""} label="Save" />
+            </div>
+          </details>
+        </>
+      ) : (
+        <ConnectLeetcode />
+      )}
+    </SectionShell>
+  )
+}
+
 export function Profile({ profile }: { profile: SettingsVM["profile"] }) {
   const rows: [string, string][] = [
     ["Birth date", formatDay(profile.birthDate, DAY.full)],
@@ -268,7 +312,7 @@ export function Profile({ profile }: { profile: SettingsVM["profile"] }) {
  * Settings body: configuration only (U21), one section at a time (SettingsLayout): Account (with profile), Data source (with sync),
  * App (appearance, install, notifications) and, with coach access, Coach. About, reports, exports and help live in More.
  */
-export function SettingsView({ vm, now, account, coach, pushKey = null, initial }: { vm: SettingsVM; now: number; account: SettingsAccount; coach?: React.ReactNode; pushKey?: string | null; initial?: string | null }) {
+export function SettingsView({ vm, now, account, coach, leetcode = { connected: false, username: null, syncedAt: null, error: null }, pushKey = null, initial }: { vm: SettingsVM; now: number; account: SettingsAccount; coach?: React.ReactNode; leetcode?: LeetcodeSettings; pushKey?: string | null; initial?: string | null }) {
   const sections: SettingsSection[] = [
     {
       id: "account",
@@ -286,7 +330,12 @@ export function SettingsView({ vm, now, account, coach, pushKey = null, initial 
         </>
       ),
     },
-    { id: "source", label: "Data source", node: <DataSource vm={vm} now={now} googleEmail={account.googleEmail} /> },
+    { id: "source", label: "Data source", node: (
+      <>
+        <DataSource vm={vm} now={now} googleEmail={account.googleEmail} />
+        <LeetcodeSource lc={leetcode} now={now} />
+      </>
+    ) },
     {
       id: "app",
       label: "App",

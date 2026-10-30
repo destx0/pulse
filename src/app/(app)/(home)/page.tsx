@@ -6,7 +6,6 @@ import { FEATURES } from "@/lib/features"
 import { clock, DAY, formatDay, formatValue, MISSING, rangeLabel, type TimeFormat } from "@/lib/format"
 import { reasonCopy } from "@/lib/reasons"
 import { dayHref, activityHref, napHref } from "@/lib/url"
-import { Wordmark } from "@/components/brand/Wordmark"
 import { EnergyBankChart } from "@/components/charts/EnergyBankChart"
 import { StrainRecoveryChart } from "@/components/charts/StrainRecoveryChart"
 import { StressChart } from "@/components/charts/StressChart"
@@ -27,8 +26,11 @@ import { SheetTrigger } from "@/components/shells/SheetTrigger"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CARD_MATERIAL } from "@/components/ui/card"
 import { getHome } from "@/server/queries/home"
+import { getLeetcode } from "@/server/queries/leetcode"
+import { requestLeetcodeSync } from "@/server/leetcode"
 import type { HomeVM, KeyStat, StressLevel } from "@/server/queries/types"
 import { pageDay, type SearchParams } from "../_lib/day"
+import { LeetcodeCard, LeetcodeToday } from "../_lib/LeetcodeCard"
 import { EditDashboard } from "../_lib/EditDashboard"
 import { MyPlan } from "../_lib/MyPlan"
 import { PlusMenu } from "../_lib/PlusMenu"
@@ -64,7 +66,8 @@ const ICON_LINK =
 /** Home `/` (spec §7.1). */
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { d, today, timeZone, timeFormat, ctx } = await pageDay(searchParams as SearchParams, "/")
-  const vm = await getHome(d, ctx)
+  const [vm, lc] = await Promise.all([getHome(d, ctx), getLeetcode(ctx)])
+  requestLeetcodeSync(ctx.userId)
   const at = (href: string) => dayHref(href, d, today)
   const { dials } = vm
   const startActivity = FEATURES.startActivity && vm.isToday
@@ -80,14 +83,11 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       }}
       slots={{
         top: (
-          // Phone: the wordmark sits right under the header's fade, 52 px below the date pill as in the reference app
-          // [latest-home-top-2], [latest-home-top-3] (spec §11 F1); -mt-2 cancels the column's own 8 px.
+          // Phone: the LeetCode pill sits right under the header's fade; -mt-2 cancels the column's own 8 px.
           <div className="max-md:-mt-2 md:pt-4 xl:pt-2">
             <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:items-center xl:gap-x-6">
               <div className="space-y-3 md:space-y-4 xl:col-start-1 xl:row-start-1">
-                <span aria-hidden className="flex justify-center text-foreground-secondary">
-                  <Wordmark className="h-[17px]" />
-                </span>
+                {vm.isToday && <LeetcodeToday vm={lc} />}
                 {/* The dials shrink into the header's ring row as this row scrolls under it (spec §4.3, HomeHeader). */}
                 <div {...{ [HOME_DIALS]: "" }} className={cn("grid grid-cols-3 items-start justify-items-center", HOME_DIALS_CLASS)}>
                   <ScoreDial variant="sleep" size="md" value={dials.sleep.value} reason={dials.sleep.reason} provisional={dials.sleep.provisional} tags={dials.sleep.tags} href={at("/sleep")} />
@@ -278,15 +278,20 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           </SectionShell>
           </div>
         ),
-        bottom: vm.weeklyTeaser && (
-          <Link href={`/reports/${vm.weeklyTeaser.period}`} className={cn(BANNER, "bg-linear-to-r from-banner-from to-banner-to")}>
-            <CalendarRange aria-hidden className="size-[22px] shrink-0" strokeWidth={1.5} />
-            <span className="min-w-0 flex-1 text-base leading-[22px] font-semibold text-balance">Your week in review</span>
-            <span className="shrink-0 font-numeric text-xs leading-4 font-medium text-foreground-secondary tabular-nums">
-              {rangeLabel(vm.weeklyTeaser.start, vm.weeklyTeaser.end)}
-            </span>
-            <ChevronRight aria-hidden className="size-5 shrink-0 text-foreground-secondary" strokeWidth={1.75} />
-          </Link>
+        bottom: (vm.weeklyTeaser || (vm.isToday && lc.connected)) && (
+          <div className="flex flex-col gap-3">
+            {vm.weeklyTeaser && (
+              <Link href={`/reports/${vm.weeklyTeaser.period}`} className={cn(BANNER, "bg-linear-to-r from-banner-from to-banner-to")}>
+                <CalendarRange aria-hidden className="size-[22px] shrink-0" strokeWidth={1.5} />
+                <span className="min-w-0 flex-1 text-base leading-[22px] font-semibold text-balance">Your week in review</span>
+                <span className="shrink-0 font-numeric text-xs leading-4 font-medium text-foreground-secondary tabular-nums">
+                  {rangeLabel(vm.weeklyTeaser.start, vm.weeklyTeaser.end)}
+                </span>
+                <ChevronRight aria-hidden className="size-5 shrink-0 text-foreground-secondary" strokeWidth={1.75} />
+              </Link>
+            )}
+            {vm.isToday && <LeetcodeCard vm={lc} />}
+          </div>
         ),
       }}
     />

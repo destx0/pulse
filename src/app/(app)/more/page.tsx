@@ -1,8 +1,9 @@
 import { connection } from "next/server"
-import { Archive, BookOpen, CalendarDays, CalendarRange, ChartLine, Database, ListChecks, Palette, Plug, UserRound, BotMessageSquare } from "lucide-react"
+import { Archive, BookOpen, CalendarDays, CalendarRange, ChartLine, Code2, Database, ListChecks, Palette, Plug, UserRound, BotMessageSquare } from "lucide-react"
 import { formatDay, rangeLabel } from "@/lib/format"
 import { coachAccess } from "@/server/coach/store"
 import { userCtx } from "@/server/queries/common"
+import { getLeetcode } from "@/server/queries/leetcode"
 import { getMore } from "@/server/queries/settings"
 import { LinkList, MORE_COLUMN, type LinkListRow } from "@/components/shells/LinkList"
 import { PageShell } from "@/components/shells/PageShell"
@@ -15,7 +16,7 @@ export const metadata = { title: "More" }
 export default async function MorePage() {
   await connection()
   const ctx = await userCtx()
-  const [vm, coach] = await Promise.all([getMore(ctx), coachAccess(ctx.db, ctx.userId)])
+  const [vm, coach, lc] = await Promise.all([getMore(ctx), coachAccess(ctx.db, ctx.userId), getLeetcode(ctx)])
   // Below 1280 px (where the sidebar lists Settings) each part of Settings is a row here, as the reference app's "Account & settings".
   const settings: LinkListRow[] = [
     { icon: UserRound, label: "Account", href: "/settings?s=account" },
@@ -41,6 +42,17 @@ export default async function MorePage() {
         <LinkList title="Account & settings" rows={settings} className="xl:hidden" />
         <LinkList title="Reports" rows={reports} />
         <LinkList title="Trends" rows={[{ icon: ChartLine, label: "Trends", aside: "Up to 1 year", href: "/trends" }]} />
+        <LinkList
+          title="Tracked"
+          rows={[
+            {
+              icon: Code2,
+              label: "LeetCode",
+              aside: !lc.connected ? "Not connected" : lc.error ? "Sync failed" : lc.today.value === null ? "Syncing" : `${lc.today.value} today`,
+              href: "/leetcode",
+            },
+          ]}
+        />
         <LinkList
           title="Journal"
           rows={[{ icon: ListChecks, label: "Behaviours", aside: `${vm.behaviours.shown} of ${vm.behaviours.total} shown`, href: "/more/behaviours" }]}

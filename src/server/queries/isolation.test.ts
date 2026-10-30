@@ -15,6 +15,9 @@ import {
   journalEntries,
   journalNotes,
   journalTags,
+  leetcodeDays,
+  leetcodeProfiles,
+  leetcodeSubmissions,
   loggedEntries,
   oauthTokens,
   profile,
@@ -32,6 +35,7 @@ import { getFitness, getHealthHub, getHealthspan, getMonitor, getStress } from "
 import { dashboardKeys, getHome, activityLogContext } from "./home";
 import { getBehaviours, getJournal, getJournalInsights } from "./journal";
 import { getLog } from "./log";
+import { getLeetcode } from "./leetcode";
 import { DETAIL_KEYS, getMetricDetail } from "./metric";
 import { getRecovery } from "./recovery";
 import { getReport, getReportArchive } from "./reports";
@@ -78,6 +82,7 @@ async function screens(ctx: QueryCtx, activityId: string | null, period: string 
     archive: await getReportArchive(ctx),
     behaviours: await getBehaviours(ctx),
     log: await getLog(TODAY, ctx),
+    leetcode: await getLeetcode(ctx),
     more: await getMore(ctx),
     yourData: await getYourData(ctx),
     settings: await getSettings(ctx),
@@ -168,6 +173,20 @@ beforeAll(async () => {
     { ...user, type: "seed", lastSuccessAt: NOW - 777, lastError: "[seed] INTRUDER" },
   ]);
   await db.insert(oauthTokens).values({ ...user, accessToken: "INTRUDER", refreshToken: "INTRUDER", expiresAt: NOW, scope: "INTRUDER", revokedAt: NOW, updatedAt: NOW });
+  await db.insert(leetcodeProfiles).values({
+    ...user,
+    username: "INTRUDER",
+    realName: "INTRUDER",
+    solvedTotal: 777,
+    submissionsTotal: 777,
+    streak: 7,
+    activeDays: 77,
+    connectedAt: NOW,
+    syncedAt: NOW,
+    lastError: null,
+  });
+  await db.insert(leetcodeDays).values({ ...user, day: TODAY, submissions: 7 });
+  await db.insert(leetcodeSubmissions).values({ ...user, id: "INTRUDER-lc", title: "INTRUDER", titleSlug: "intruder", lang: "cpp", submittedAt: NOW });
 });
 
 describe("screen queries are scoped to one user", () => {
@@ -213,6 +232,10 @@ describe("screen queries are scoped to one user", () => {
     expect(shell).toMatchObject({ connection: "auth_revoked", firstDay: "2026-01-01", streak: null });
     const settings = vms.settingsGoogle as Awaited<ReturnType<typeof getSettings>>;
     expect(settings.source.status).toBe("revoked");
+    const leetcode = vms.leetcode as Awaited<ReturnType<typeof getLeetcode>>;
+    expect(leetcode).toMatchObject({ connected: true, username: "INTRUDER" });
+    expect(leetcode.recent.map((r) => r.title)).toEqual(["INTRUDER"]);
+    expect(leetcode.today.value).toBe(1);
     expect(vms.dashboard).toEqual(["glucose", "distance"]);
     const monitor = vms[`monitor@${TODAY}`] as Awaited<ReturnType<typeof getMonitor>>;
     expect(monitor.heartRhythm.ecg.map((e) => e.id)).toEqual(["INTRUDER-ecg"]);

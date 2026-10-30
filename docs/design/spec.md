@@ -2997,6 +2997,7 @@ Open items for U17 (not design changes): `src/lib/header-state.ts` with its unit
 | I15 | Daily outlook gradient switches to Day in review at 17:00 | §7.1 | Both banners are captured at different times of day; the switch time is not |
 | I16 | Health hub tint is constant teal (not tied to the orb colour) | §2.1 | Green and mixed orbs both sit on a teal glow; the dependence, if any, is unclear |
 | CAL2-CAL6 | Calendar year label, week start, Sleep context, selected-day ring, ≥ 768 placement | §5.16 | as listed in §11 |
+| L1 | LeetCode tracker: `/leetcode`, a "solved today" pill under the Home wordmark, a More row and a Settings source card | §7.14 | A second source outside the reference app; public profile data, never a health input. Problem counts dedupe by `titleSlug`; the heatmap is submissions |
 
 ### 12.2 Coverage gaps (screens or interactions with no current reference)
 

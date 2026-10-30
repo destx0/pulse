@@ -545,6 +545,30 @@ export type YourDataVM = {
   mode: "demo" | "google";
 };
 
+/** LeetCode `/leetcode`: an independent source, never an input to a health score. Days are LeetCode's calendar days. */
+export type LeetcodeVM = {
+  connected: boolean;
+  username: string | null;
+  realName: string | null;
+  avatarUrl: string | null;
+  ranking: number | null;
+  reputation: number | null;
+  starRating: number | null;
+  solved: { total: Metric<number>; easy: Metric<number>; medium: Metric<number>; hard: Metric<number> };
+  submissions: Metric<number>;
+  streak: Metric<number>;
+  activeDays: Metric<number>;
+  today: Metric<number>;
+  contest: Metric<{ rating: number; attended: number; globalRanking: number | null; topPct: number | null }>;
+  activity: { day: string; count: number }[];
+  recent: { id: string; title: string; slug: string; lang: string | null; at: number }[];
+  /** Epoch ms. */
+  syncedAt: number | null;
+  /** The last refresh failed (`code (HTTP n)`); the numbers are the previous success. */
+  error: string | null;
+  stale: boolean;
+};
+
 // ── Calendar (DateSwitcher month panel) ─────────────────────────────────────
 
 /** One day's three headline scores; null when the day has none. Strain is on the 0–21 scale. */

@@ -7,6 +7,7 @@ import { providerLabel, providerOptions } from "@/server/coach/options"
 import { coachAccess, coachSetup } from "@/server/coach/store"
 import { pushPublicKey } from "@/server/push"
 import { userCtx } from "@/server/queries/common"
+import { getLeetcode } from "@/server/queries/leetcode"
 import { CoachSettings } from "../coach/CoachSettings"
 import { getSettings } from "@/server/queries/settings"
 import { DetailShell } from "@/components/shells/DetailShell"
@@ -26,13 +27,14 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   await connection()
   const { s } = await searchParams
   const ctx = await userCtx()
-  const [vm, user, avatar, googleEmail, coach, coachState] = await Promise.all([
+  const [vm, user, avatar, googleEmail, coach, coachState, lc] = await Promise.all([
     getSettings(ctx),
     currentUser(),
     avatarSrc(ctx.db, ctx.userId),
     connectedGoogleEmail(ctx.db, ctx.userId),
     coachAccess(ctx.db, ctx.userId),
     coachSetup(ctx.db, ctx.userId),
+    getLeetcode(ctx),
   ])
   // Same rule as the admin gate: only a Google instance has an admin panel.
   const admin = getConfig().dataSource === "google" && (await isAdmin(ctx.db, ctx.userId))
@@ -59,6 +61,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
               googleEmail,
               admin,
             }}
+            leetcode={{ connected: lc.connected, username: lc.username, syncedAt: lc.syncedAt, error: lc.error }}
           />
         </>
       }

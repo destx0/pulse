@@ -566,6 +566,60 @@ export const pushSubscriptions = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.endpoint] })],
 );
 
+/**
+ * LeetCode is an independent source: public profile data, no OAuth and no effect on health scores. It has its own
+ * tables, cleared by Disconnect LeetCode, never by a Google account switch.
+ */
+export const leetcodeProfiles = pgTable("leetcode_profiles", {
+  userId: userId().primaryKey(),
+  username: text("username").notNull(),
+  realName: text("real_name"),
+  avatarUrl: text("avatar_url"),
+  ranking: integer("ranking"),
+  reputation: integer("reputation"),
+  starRating: real("star_rating"),
+  solvedTotal: integer("solved_total").notNull().default(0),
+  solvedEasy: integer("solved_easy").notNull().default(0),
+  solvedMedium: integer("solved_medium").notNull().default(0),
+  solvedHard: integer("solved_hard").notNull().default(0),
+  submissionsTotal: integer("submissions_total").notNull().default(0),
+  streak: integer("streak").notNull().default(0),
+  activeDays: integer("active_days").notNull().default(0),
+  contestRating: real("contest_rating"),
+  contestsAttended: integer("contests_attended"),
+  contestGlobalRanking: integer("contest_global_ranking"),
+  contestTopPct: real("contest_top_pct"),
+  connectedAt: ts("connected_at").notNull(),
+  syncedAt: ts("synced_at"),
+  /** Status and code only, never a response body. */
+  lastError: text("last_error"),
+});
+
+/** LeetCode's submission calendar: accepted submissions per UTC day (`day` is LeetCode's own day key). */
+export const leetcodeDays = pgTable(
+  "leetcode_days",
+  {
+    userId: userId(),
+    day: day("day").notNull(),
+    submissions: integer("submissions").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] })],
+);
+
+/** The latest accepted solves, for the recent list. Upserted by LeetCode's submission id. */
+export const leetcodeSubmissions = pgTable(
+  "leetcode_submissions",
+  {
+    userId: userId(),
+    id: text("id").notNull(),
+    title: text("title").notNull(),
+    titleSlug: text("title_slug").notNull(),
+    lang: text("lang"),
+    submittedAt: ts("submitted_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.id] }), index("leetcode_submissions_recent").on(t.userId, t.submittedAt)],
+);
+
 /** Tables holding a user's synced Google data and what was computed from it (cleared on a Google account switch). */
 export const SYNCED_TABLES = [
   syncState, rawPayloads, hrDays, stepsDays, dailyMetrics, sleepSegments, sleepSessions, exercises, dailyValues,
